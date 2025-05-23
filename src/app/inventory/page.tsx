@@ -1,21 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 import InventoryTable from "../../components/InventoryTable";
 import AddProductForm from "../../components/AddProductForm";
+import EditProductForm from "../../components/EditProductForm";
 
 interface Product {
   id: string;
   name: string;
-  description: string | null;
-  sku: string | null;
+  description?: string;
+  sku?: string;
   category: string;
   price: number;
-  cost_price: number | null;
+  cost_price?: number;
   quantity: number;
   min_stock_level: number;
-  image_url: string | null;
+  image_url?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -23,185 +24,121 @@ interface Product {
 
 export default function InventoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
+  const [showEditProductForm, setShowEditProductForm] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [debugInfo, setDebugInfo] = useState<string>("");
-  const [showAddProductForm, setShowAddProductForm] = useState(false);
+  const [stockFilter, setStockFilter] = useState("all");
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
+  useEffect(() => {
+    filterProducts();
+  }, [products, searchTerm, categoryFilter, stockFilter]);
+
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      setDebugInfo("Starting to fetch products...");
-
-      // First, let's check if we can connect to Supabase
-      const { data: testData, error: testError } = await supabase
-        .from("products")
-        .select("count");
-
-      if (testError) {
-        setDebugInfo(`Connection test failed: ${testError.message}`);
-        throw testError;
-      }
-
-      setDebugInfo("Connection successful, fetching products...");
+      setError(null);
 
       const { data, error } = await supabase
         .from("products")
         .select("*")
-        .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        setDebugInfo(`Query error: ${error.message}`);
-        throw error;
-      }
-
-      setDebugInfo(`Query successful, found ${data?.length || 0} products`);
-      console.log("Fetched products:", data);
+      if (error) throw error;
 
       setProducts(data || []);
-
-      // If no products found, add some sample data
-      if (!data || data.length === 0) {
-        setDebugInfo("No products found, using sample data");
-        setProducts([
-          {
-            id: "SKC001",
-            name: "Sample Vitamin C Serum",
-            description: "Brightening vitamin C serum for face",
-            sku: "VCS001",
-            category: "skincare",
-            price: 29.99,
-            cost_price: 15.0,
-            quantity: 50,
-            min_stock_level: 10,
-            image_url: null,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-          {
-            id: "MKP001",
-            name: "Sample Foundation",
-            description: "Full coverage foundation",
-            sku: "FSF001",
-            category: "makeup",
-            price: 34.99,
-            cost_price: 18.0,
-            quantity: 25,
-            min_stock_level: 8,
-            image_url: null,
-            is_active: true,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ]);
-      }
+      console.log("Fetched products:", data);
     } catch (err) {
       console.error("Error fetching products:", err);
-      const errorMessage =
-        err instanceof Error ? err.message : "Unknown error occurred";
-      setError(errorMessage);
-      setDebugInfo(`Error: ${errorMessage}`);
-
-      // Set fallback sample data
-      setProducts([
-        {
-          id: "SKC001",
-          name: "Sample Vitamin C Serum",
-          description: "Brightening vitamin C serum for face",
-          sku: "VCS001",
-          category: "skincare",
-          price: 29.99,
-          cost_price: 15.0,
-          quantity: 50,
-          min_stock_level: 10,
-          image_url: null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-        {
-          id: "MKP001",
-          name: "Sample Foundation",
-          description: "Full coverage foundation",
-          sku: "FSF001",
-          category: "makeup",
-          price: 34.99,
-          cost_price: 18.0,
-          quantity: 25,
-          min_stock_level: 8,
-          image_url: null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        },
-      ]);
+      setError("Failed to fetch products");
     } finally {
       setLoading(false);
     }
   };
 
+  const filterProducts = () => {
+    let filtered = [...products];
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (product) =>
+          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (categoryFilter !== "all") {
+      filtered = filtered.filter(
+        (product) => product.category === categoryFilter
+      );
+    }
+
+    // Stock filter
+    if (stockFilter !== "all") {
+      if (stockFilter === "out_of_stock") {
+        filtered = filtered.filter((product) => product.quantity === 0);
+      } else if (stockFilter === "low_stock") {
+        filtered = filtered.filter(
+          (product) => product.quantity > 0 && product.quantity <= 10
+        );
+      } else if (stockFilter === "in_stock") {
+        filtered = filtered.filter((product) => product.quantity > 10);
+      }
+    }
+
+    setFilteredProducts(filtered);
+  };
+
   const handleEdit = (product: Product) => {
-    console.log("Edit product:", product);
-    alert(`Edit functionality for ${product.name} will be implemented`);
+    setSelectedProduct(product);
+    setShowEditProductForm(true);
   };
 
   const handleDelete = async (productId: string) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      try {
-        const { error } = await supabase
-          .from("products")
-          .update({ is_active: false })
-          .eq("id", productId);
+    try {
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        alert("Product deleted successfully!");
-        fetchProducts();
-      } catch (err) {
-        console.error("Error deleting product:", err);
-        alert("Failed to delete product. This might be sample data.");
-      }
+      alert("✅ Product deleted successfully!");
+      fetchProducts();
+    } catch (err) {
+      console.error("Error deleting product:", err);
+      alert("❌ Failed to delete product");
     }
   };
 
-  // Filter products based on search and category
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+  const handleView = (product: Product) => {
+    // You can implement a view modal here
+    alert(`View details for: ${product.name}`);
+  };
 
-    const matchesCategory =
-      categoryFilter === "all" ||
-      product.category.toLowerCase() === categoryFilter.toLowerCase();
-
-    return matchesSearch && matchesCategory;
-  });
-
-  // Get unique categories
-  const categories = Array.from(new Set(products.map((p) => p.category)));
+  const categories = [
+    "skincare",
+    "makeup",
+    "haircare",
+    "fragrance",
+    "tools",
+    "supplements",
+  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Debug Info */}
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-700">
-          <strong>Debug:</strong> {debugInfo}
-        </p>
-        <p className="text-xs text-blue-600 mt-1">
-          Products loaded: {products.length} | Filtered:{" "}
-          {filteredProducts.length}
-        </p>
-      </div>
-
+      {/* Header */}
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -243,113 +180,35 @@ export default function InventoryPage() {
         </div>
       </div>
 
+      {/* Error Display */}
       {error && (
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
           <div className="flex">
-            <svg
-              className="w-5 h-5 text-yellow-400 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div>
-              <p className="text-sm text-yellow-800">
-                <strong>Database Connection Issue:</strong> {error}
-              </p>
-              <p className="text-xs text-yellow-700 mt-1">
-                Showing sample data. Check your Supabase configuration.
-              </p>
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="search"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Search Products
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="text"
-                id="search"
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Search by name, SKU, or description..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-          <div>
-            <label
-              htmlFor="category"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Filter by Category
-            </label>
-            <select
-              id="category"
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">All Categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-blue-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-              </div>
-            </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">
                 Total Products
@@ -363,27 +222,13 @@ export default function InventoryPage() {
 
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-green-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-            </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-500">In Stock</p>
+              <p className="text-sm font-medium text-gray-500">Total Value</p>
               <p className="text-lg font-semibold text-gray-900">
-                {products.filter((p) => p.quantity > p.min_stock_level).length}
+                AED{" "}
+                {products
+                  .reduce((sum, p) => sum + p.price * p.quantity, 0)
+                  .toFixed(2)}
               </p>
             </div>
           </div>
@@ -391,30 +236,12 @@ export default function InventoryPage() {
 
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-yellow-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L5.35 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-              </div>
-            </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Low Stock</p>
               <p className="text-lg font-semibold text-gray-900">
                 {
-                  products.filter(
-                    (p) => p.quantity <= p.min_stock_level && p.quantity > 0
-                  ).length
+                  products.filter((p) => p.quantity > 0 && p.quantity <= 10)
+                    .length
                 }
               </p>
             </div>
@@ -423,29 +250,77 @@ export default function InventoryPage() {
 
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-4 h-4 text-red-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </div>
-            </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Out of Stock</p>
               <p className="text-lg font-semibold text-gray-900">
                 {products.filter((p) => p.quantity === 0).length}
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Products
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, SKU, or description..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Category
+            </label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Stock Level
+            </label>
+            <select
+              value={stockFilter}
+              onChange={(e) => setStockFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">All Stock Levels</option>
+              <option value="in_stock">In Stock</option>
+              <option value="low_stock">Low Stock</option>
+              <option value="out_of_stock">Out of Stock</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setSearchTerm("");
+                setCategoryFilter("all");
+                setStockFilter("all");
+              }}
+              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
       </div>
@@ -466,9 +341,10 @@ export default function InventoryPage() {
           </div>
         ) : (
           <InventoryTable
-            data={filteredProducts}
+            items={filteredProducts}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onView={handleView}
           />
         )}
       </div>
@@ -480,6 +356,19 @@ export default function InventoryPage() {
         onSuccess={() => {
           fetchProducts(); // Refresh products data
         }}
+      />
+
+      {/* Edit Product Form Modal */}
+      <EditProductForm
+        isOpen={showEditProductForm}
+        onClose={() => {
+          setShowEditProductForm(false);
+          setSelectedProduct(null);
+        }}
+        onSuccess={() => {
+          fetchProducts(); // Refresh products data
+        }}
+        product={selectedProduct}
       />
     </div>
   );
