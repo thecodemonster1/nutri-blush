@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import InventoryTable from "../../components/InventoryTable";
+import AddProductForm from "../../components/AddProductForm";
 
 interface Product {
   id: string;
@@ -26,6 +27,8 @@ export default function InventoryPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [debugInfo, setDebugInfo] = useState<string>("");
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -34,17 +37,112 @@ export default function InventoryPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
+      setDebugInfo("Starting to fetch products...");
+
+      // First, let's check if we can connect to Supabase
+      const { data: testData, error: testError } = await supabase
+        .from("products")
+        .select("count");
+
+      if (testError) {
+        setDebugInfo(`Connection test failed: ${testError.message}`);
+        throw testError;
+      }
+
+      setDebugInfo("Connection successful, fetching products...");
+
       const { data, error } = await supabase
         .from("products")
         .select("*")
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        setDebugInfo(`Query error: ${error.message}`);
+        throw error;
+      }
+
+      setDebugInfo(`Query successful, found ${data?.length || 0} products`);
+      console.log("Fetched products:", data);
+
       setProducts(data || []);
+
+      // If no products found, add some sample data
+      if (!data || data.length === 0) {
+        setDebugInfo("No products found, using sample data");
+        setProducts([
+          {
+            id: "SKC001",
+            name: "Sample Vitamin C Serum",
+            description: "Brightening vitamin C serum for face",
+            sku: "VCS001",
+            category: "skincare",
+            price: 29.99,
+            cost_price: 15.0,
+            quantity: 50,
+            min_stock_level: 10,
+            image_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          {
+            id: "MKP001",
+            name: "Sample Foundation",
+            description: "Full coverage foundation",
+            sku: "FSF001",
+            category: "makeup",
+            price: 34.99,
+            cost_price: 18.0,
+            quantity: 25,
+            min_stock_level: 8,
+            image_url: null,
+            is_active: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
+      }
     } catch (err) {
       console.error("Error fetching products:", err);
-      setError(err instanceof Error ? err.message : "Unknown error occurred");
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error occurred";
+      setError(errorMessage);
+      setDebugInfo(`Error: ${errorMessage}`);
+
+      // Set fallback sample data
+      setProducts([
+        {
+          id: "SKC001",
+          name: "Sample Vitamin C Serum",
+          description: "Brightening vitamin C serum for face",
+          sku: "VCS001",
+          category: "skincare",
+          price: 29.99,
+          cost_price: 15.0,
+          quantity: 50,
+          min_stock_level: 10,
+          image_url: null,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        {
+          id: "MKP001",
+          name: "Sample Foundation",
+          description: "Full coverage foundation",
+          sku: "FSF001",
+          category: "makeup",
+          price: 34.99,
+          cost_price: 18.0,
+          quantity: 25,
+          min_stock_level: 8,
+          image_url: null,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -52,7 +150,7 @@ export default function InventoryPage() {
 
   const handleEdit = (product: Product) => {
     console.log("Edit product:", product);
-    // Implement edit functionality
+    alert(`Edit functionality for ${product.name} will be implemented`);
   };
 
   const handleDelete = async (productId: string) => {
@@ -65,11 +163,11 @@ export default function InventoryPage() {
 
         if (error) throw error;
 
-        // Refresh the products list
+        alert("Product deleted successfully!");
         fetchProducts();
       } catch (err) {
         console.error("Error deleting product:", err);
-        alert("Failed to delete product");
+        alert("Failed to delete product. This might be sample data.");
       }
     }
   };
@@ -93,6 +191,17 @@ export default function InventoryPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Debug Info */}
+      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <p className="text-sm text-blue-700">
+          <strong>Debug:</strong> {debugInfo}
+        </p>
+        <p className="text-xs text-blue-600 mt-1">
+          Products loaded: {products.length} | Filtered:{" "}
+          {filteredProducts.length}
+        </p>
+      </div>
+
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -104,8 +213,17 @@ export default function InventoryPage() {
               product performance.
             </p>
           </div>
-          <div className="mt-4 sm:mt-0">
-            <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+          <div className="mt-4 sm:mt-0 flex space-x-2">
+            <button
+              onClick={fetchProducts}
+              className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            >
+              🔄 Refresh
+            </button>
+            <button
+              onClick={() => setShowAddProductForm(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+            >
               <svg
                 className="w-4 h-4 mr-2"
                 fill="none"
@@ -124,6 +242,32 @@ export default function InventoryPage() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex">
+            <svg
+              className="w-5 h-5 text-yellow-400 mr-2"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <p className="text-sm text-yellow-800">
+                <strong>Database Connection Issue:</strong> {error}
+              </p>
+              <p className="text-xs text-yellow-700 mt-1">
+                Showing sample data. Check your Supabase configuration.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
@@ -231,7 +375,7 @@ export default function InventoryPage() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0114 0z"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
               </div>
@@ -320,34 +464,6 @@ export default function InventoryPage() {
             </div>
             <p className="mt-4 text-gray-600">Loading inventory...</p>
           </div>
-        ) : error ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L5.35 16.5c-.77.833.192 2.5 1.732 2.5z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Error loading inventory
-            </h3>
-            <p className="text-gray-500 mb-6">{error}</p>
-            <button
-              onClick={fetchProducts}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-            >
-              Try Again
-            </button>
-          </div>
         ) : (
           <InventoryTable
             data={filteredProducts}
@@ -356,6 +472,15 @@ export default function InventoryPage() {
           />
         )}
       </div>
+
+      {/* Add Product Form Modal */}
+      <AddProductForm
+        isOpen={showAddProductForm}
+        onClose={() => setShowAddProductForm(false)}
+        onSuccess={() => {
+          fetchProducts(); // Refresh products data
+        }}
+      />
     </div>
   );
 }
