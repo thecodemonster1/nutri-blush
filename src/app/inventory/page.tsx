@@ -1,3 +1,4 @@
+"use client";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import InventoryTable from "@/components/InventoryTable";
@@ -7,9 +8,7 @@ export default function InventoryPage() {
 
   useEffect(() => {
     const fetchInventory = async () => {
-      const { data, error } = await supabase
-        .from("inventory")
-        .select("*");
+      const { data, error } = await supabase.from("inventory").select("*");
 
       if (error) {
         console.error("Error fetching inventory:", error);
