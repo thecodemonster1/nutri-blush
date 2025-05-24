@@ -115,6 +115,7 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
         .update({ quantity: newQuantity })
         .eq("id", selectedProduct.id);
 
+      alert("✅ Sale completed successfully!");
       onSuccess();
       onClose();
     } catch (err) {
@@ -268,7 +269,10 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-semibold text-gray-900">
-                            AED {product.price}
+                            LKR{" "}
+                            {product.price.toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                            })}
                           </p>
                           <div
                             className={`w-4 h-4 rounded-full border-2 ${
@@ -415,7 +419,7 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
                       }))
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="+971 50 123 4567"
+                    placeholder="+94 70 123 4567"
                   />
                 </div>
               </div>
@@ -466,7 +470,12 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
                     <span className="text-gray-600">
                       {selectedProduct?.name}
                     </span>
-                    <span>AED {selectedProduct?.price}</span>
+                    <span>
+                      LKR{" "}
+                      {selectedProduct?.price.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Quantity</span>
@@ -474,16 +483,31 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Subtotal</span>
-                    <span>AED {total.toFixed(2)}</span>
+                    <span>
+                      LKR{" "}
+                      {total.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Discount</span>
-                    <span>-AED {formData.discount_amount.toFixed(2)}</span>
+                    <span>
+                      -LKR{" "}
+                      {formData.discount_amount.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                   <hr className="my-2" />
                   <div className="flex justify-between text-lg font-semibold">
                     <span>Total</span>
-                    <span>AED {final.toFixed(2)}</span>
+                    <span>
+                      LKR{" "}
+                      {final.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -491,7 +515,7 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Discount Amount
+                    Discount Amount (LKR)
                   </label>
                   <input
                     type="number"
@@ -506,6 +530,7 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({
                       }))
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="0.00"
                   />
                 </div>
                 <div>
