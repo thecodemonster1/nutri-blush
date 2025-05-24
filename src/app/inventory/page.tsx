@@ -225,10 +225,10 @@ export default function InventoryPage() {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-500">Total Value</p>
               <p className="text-lg font-semibold text-gray-900">
-                AED{" "}
+                LKR{" "}
                 {products
                   .reduce((sum, p) => sum + p.price * p.quantity, 0)
-                  .toFixed(2)}
+                  .toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </p>
             </div>
           </div>
