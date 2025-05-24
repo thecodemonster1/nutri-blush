@@ -114,17 +114,17 @@ export default function InventoryPage() {
 
       if (error) throw error;
 
-      alert("✅ Product deleted successfully!");
+      // alert("✅ Product deleted successfully!");
       fetchProducts();
     } catch (err) {
       console.error("Error deleting product:", err);
-      alert("❌ Failed to delete product");
+      // alert("❌ Failed to delete product");
     }
   };
 
   const handleView = (product: Product) => {
     // You can implement a view modal here
-    alert(`View details for: ${product.name}`);
+    // alert(`View details for: ${product.name}`);
   };
 
   const categories = [
