@@ -450,11 +450,11 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selling Price (AED) <span className="text-red-500">*</span>
+                  Selling Price (LKR) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2 text-gray-500">
-                    AED
+                    LKR
                   </span>
                   <input
                     type="number"
@@ -480,11 +480,11 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cost Price (AED)
+                  Cost Price (LKR)
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2 text-gray-500">
-                    AED
+                    LKR
                   </span>
                   <input
                     type="number"
@@ -519,11 +519,13 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
                     Profit Margin:
                   </span>
                   <span className="text-sm font-semibold text-green-800">
-                    AED{" "}
+                    LKR{" "}
                     {(
                       parseFloat(formData.price) -
                       parseFloat(formData.cost_price)
-                    ).toFixed(2)}{" "}
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}{" "}
                     (
                     {(
                       ((parseFloat(formData.price) -
