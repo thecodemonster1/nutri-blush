@@ -90,7 +90,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm() || !product) return;
 
     setLoading(true);
@@ -101,7 +101,9 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
         sku: formData.sku.trim() || null,
         category: formData.category,
         price: parseFloat(formData.price),
-        cost_price: formData.cost_price ? parseFloat(formData.cost_price) : null,
+        cost_price: formData.cost_price
+          ? parseFloat(formData.cost_price)
+          : null,
         quantity: parseInt(formData.quantity),
         min_stock_level: parseInt(formData.min_stock_level) || 10,
         image_url: formData.image_url.trim() || null,
@@ -121,16 +123,16 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
       onClose();
     } catch (err: any) {
       console.error("Error updating product:", err);
-      
+
       let errorMessage = "Failed to update product. ";
-      if (err?.code === '23505') {
+      if (err?.code === "23505") {
         errorMessage += "A product with this SKU already exists.";
       } else if (err?.message) {
         errorMessage += err.message;
       } else {
         errorMessage += "Please try again.";
       }
-      
+
       alert("❌ " + errorMessage);
     } finally {
       setLoading(false);
@@ -207,7 +209,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
               </span>
               <span>Basic Information</span>
             </h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -298,11 +300,11 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Selling Price (AED) <span className="text-red-500">*</span>
+                  Selling Price (LKR) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2 text-gray-500">
-                    AED
+                    LKR
                   </span>
                   <input
                     type="number"
@@ -328,11 +330,11 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cost Price (AED)
+                  Cost Price (LKR)
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-2 text-gray-500">
-                    AED
+                    LKR
                   </span>
                   <input
                     type="number"
@@ -367,11 +369,13 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
                     Profit Margin:
                   </span>
                   <span className="text-sm font-semibold text-green-800">
-                    AED{" "}
+                    LKR{" "}
                     {(
                       parseFloat(formData.price) -
                       parseFloat(formData.cost_price)
-                    ).toFixed(2)}{" "}
+                    ).toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                    })}{" "}
                     (
                     {(
                       ((parseFloat(formData.price) -
@@ -479,22 +483,26 @@ const EditProductForm: React.FC<EditProductFormProps> = ({
                 <div className="flex items-center space-x-3 mt-3">
                   <button
                     type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, is_active: true }))}
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, is_active: true }))
+                    }
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       formData.is_active
-                        ? 'bg-green-100 text-green-700 border-2 border-green-300'
-                        : 'bg-gray-100 text-gray-600 border-2 border-gray-200'
+                        ? "bg-green-100 text-green-700 border-2 border-green-300"
+                        : "bg-gray-100 text-gray-600 border-2 border-gray-200"
                     }`}
                   >
                     ✅ Active
                   </button>
                   <button
                     type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, is_active: false }))}
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, is_active: false }))
+                    }
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                       !formData.is_active
-                        ? 'bg-red-100 text-red-700 border-2 border-red-300'
-                        : 'bg-gray-100 text-gray-600 border-2 border-gray-200'
+                        ? "bg-red-100 text-red-700 border-2 border-red-300"
+                        : "bg-gray-100 text-gray-600 border-2 border-gray-200"
                     }`}
                   >
                     ❌ Inactive
