@@ -214,7 +214,10 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-semibold text-gray-900">
-                      AED {item.price.toFixed(2)}
+                      LKR{" "}
+                      {item.price.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
