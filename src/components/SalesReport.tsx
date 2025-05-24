@@ -157,7 +157,9 @@ const SalesReport: React.FC<SalesReportProps> = ({ data }) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return `AED ${amount.toFixed(2)}`;
+    return `LKR ${amount.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+    })}`;
   };
 
   if (data.length === 0) {
