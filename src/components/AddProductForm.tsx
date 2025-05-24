@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 interface AddProductFormProps {
@@ -18,7 +18,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
     name: "",
     description: "",
     sku: "",
-    category: "skincare",
+    category_id: "",
     price: "",
     cost_price: "",
     quantity: "",
@@ -28,6 +28,30 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>(
+    []
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (err) {
+      console.error("Error fetching categories:", err);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -48,12 +72,16 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
       newErrors.cost_price = "Cost price cannot be negative";
     }
 
+    if (!formData.category_id) {
+      newErrors.category_id = "Category is required";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const generateSKU = () => {
-    const categoryPrefix = formData.category.slice(0, 3).toUpperCase();
+    const categoryPrefix = formData.category_id.slice(0, 3).toUpperCase();
     const randomSuffix = Math.random().toString(36).substr(2, 6).toUpperCase();
     const sku = `${categoryPrefix}${randomSuffix}`;
     setFormData((prev) => ({ ...prev, sku }));
@@ -95,7 +123,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
         name: `Test Product ${timestamp}`,
         description: "This is a test product created for debugging",
         sku: `TEST${timestamp}`,
-        category: "skincare",
+        category_id: "skincare",
         price: 29.99,
         cost_price: 15.0,
         quantity: 100,
@@ -155,7 +183,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
         name: formData.name.trim(),
         description: formData.description.trim() || null,
         sku: formData.sku.trim() || null,
-        category: formData.category,
+        category_id: formData.category_id,
         price: parseFloat(formData.price),
         cost_price: formData.cost_price
           ? parseFloat(formData.cost_price)
@@ -188,7 +216,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
         name: "",
         description: "",
         sku: "",
-        category: "skincare",
+        category_id: "",
         price: "",
         cost_price: "",
         quantity: "",
@@ -239,15 +267,6 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
   }
 
   if (!isOpen) return null;
-
-  const categories = [
-    { value: "skincare", label: "Skincare", icon: "✨" },
-    { value: "makeup", label: "Makeup", icon: "💄" },
-    { value: "haircare", label: "Hair Care", icon: "💇‍♀️" },
-    { value: "fragrance", label: "Fragrance", icon: "🌸" },
-    { value: "tools", label: "Tools & Accessories", icon: "🔧" },
-    { value: "supplements", label: "Supplements", icon: "💊" },
-  ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -419,21 +438,27 @@ const AddProductForm: React.FC<AddProductFormProps> = ({
                   Category <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={formData.category}
+                  value={formData.category_id}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      category: e.target.value,
+                      category_id: e.target.value,
                     }))
                   }
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
-                  {categories.map((cat) => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.icon} {cat.label}
+                  <option value="">Select a category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
                     </option>
                   ))}
                 </select>
+                {errors.category_id && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.category_id}
+                  </p>
+                )}
               </div>
             </div>
           </div>
